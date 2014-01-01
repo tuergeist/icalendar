@@ -5,7 +5,7 @@ SEQUENCE_TYPES = (list, tuple)
 DEFAULT_ENCODING = 'utf-8'
 
 
-def to_unicode(value, encoding='utf-8'):
+def to_unicode(value, typecast=False, encoding=DEFAULT_ENCODING):
     """Converts a value to unicode, even if it is already a unicode string.
     """
     if isinstance(value, compat.unicode_type):
@@ -14,7 +14,11 @@ def to_unicode(value, encoding='utf-8'):
         try:
             value = value.decode(encoding)
         except UnicodeDecodeError:
-            value = value.decode('utf-8', 'replace')
+            value = value.decode(DEFAULT_ENCODING, 'replace')
+    else:
+        if typecast:
+            # convert to string type
+            value = compat.unicode_type(value)
     return value
 
 

@@ -10,8 +10,8 @@ from icalendar import compat
 from icalendar.caselessdict import CaselessDict
 from icalendar.parser_tools import DEFAULT_ENCODING
 from icalendar.parser_tools import SEQUENCE_TYPES
-from icalendar.parser_tools import data_encode
 from icalendar.parser_tools import to_unicode
+from icalendar.parser_tools import data_encode
 
 import re
 
@@ -50,14 +50,15 @@ def unescape_char(text):
 
 def tzid_from_dt(dt):
     tzid = None
-    if hasattr(dt.tzinfo, 'zone'):
-        tzid = dt.tzinfo.zone  # pytz implementation
-    elif hasattr(dt.tzinfo, 'tzname'):
-        try:
-            tzid = dt.tzinfo.tzname(dt)  # dateutil implementation
-        except AttributeError:
-            # No tzid available
-            pass
+    if hasattr(dt, 'tzinfo'):
+        if hasattr(dt.tzinfo, 'zone'):
+            tzid = dt.tzinfo.zone  # pytz implementation
+        elif hasattr(dt.tzinfo, 'tzname'):
+            try:
+                tzid = dt.tzinfo.tzname(dt)  # dateutil implementation
+            except AttributeError:
+                # No tzid available
+                pass
     return tzid
 
 
@@ -88,13 +89,6 @@ def foldline(line, limit=75, fold_sep=u'\r\n '):
 
 #################################################################
 # Property parameter stuff
-
-def param_value(value):
-    """Returns a parameter value.
-    """
-    if isinstance(value, SEQUENCE_TYPES):
-        return q_join(value)
-    return dquote(value)
 
 
 # Could be improved
@@ -172,25 +166,6 @@ class Parameters(CaselessDict):
         """
         return self.keys()
 
-# TODO?
-# Later, when I get more time... need to finish this off now. The last major
-# thing missing.
-#   def _encode(self, name, value, cond=1):
-#       # internal, for conditional convertion of values.
-#       if cond:
-#           klass = types_factory.for_property(name)
-#           return klass(value)
-#       return value
-#
-#   def add(self, name, value, encode=0):
-#       "Add a parameter value and optionally encode it."
-#       if encode:
-#           value = self._encode(name, value, encode)
-#       self[name] = value
-#
-#   def decoded(self, name):
-#       "returns a decoded value, or list of same"
-
     def __repr__(self):
         return 'Parameters(%s)' % data_encode(self)
 
@@ -198,13 +173,16 @@ class Parameters(CaselessDict):
         result = []
         items = self.items()
         for key, value in sorted(items):
-            value = param_value(value)
-            if isinstance(value, compat.unicode_type):
-                value = value.encode(DEFAULT_ENCODING)
-            # CaselessDict keys are always unicode
-            key = key.upper().encode(DEFAULT_ENCODING)
-            result.append(key + b'=' + value)
-        return b';'.join(result)
+            if isinstance(value, SEQUENCE_TYPES):
+                value = q_join(value)
+            else:
+                value = dquote(value)
+            key = key.upper()
+            key = to_unicode(key)
+            value = to_unicode(value)
+            result.append(key + u'=' + value)
+
+        return u';'.join(result)
 
     @classmethod
     def from_ical(cls, st, strict=False):
@@ -257,36 +235,32 @@ def unsescape_string(val):
 #########################################
 # parsing and generation of content lines
 
-class Contentline(compat.unicode_type):
+class Contentline(object):
     """A content line is basically a string that can be folded and parsed into
     parts.
     """
-    def __new__(cls, value, strict=False, encoding=DEFAULT_ENCODING):
-        value = to_unicode(value, encoding=encoding)
+
+    def __init__(self, value, strict=False):
+        value = to_unicode(value)
         assert u'\n' not in value, ('Content line can not contain unescaped '
                                     'new line characters.')
-        self = super(Contentline, cls).__new__(cls, value)
+        self.value = value
         self.strict = strict
-        return self
 
     @classmethod
     def from_parts(cls, name, params, values):
         """Turn a parts into a content line.
         """
         assert isinstance(params, Parameters)
+        name = to_unicode(name)
+        values = to_unicode(values)
         if hasattr(values, 'to_ical'):
             values = values.to_ical()
         else:
             values = vText(values).to_ical()
-        # elif isinstance(values, basestring):
-        #    values = escape_char(values)
 
-        # TODO: after unicode only, remove this
-        # Convert back to unicode, after to_ical encoded it.
-        name = to_unicode(name)
-        values = to_unicode(values)
         if params:
-            params = to_unicode(params.to_ical())
+            params = params.to_ical()
             return cls(u'%s;%s:%s' % (name, params, values))
         return cls(u'%s:%s' % (name, values))
 
@@ -294,7 +268,7 @@ class Contentline(compat.unicode_type):
         """Split the content line up into (name, parameters, values) parts.
         """
         try:
-            st = escape_string(self)
+            st = escape_string(self.value)
             name_split = None
             value_split = None
             in_quotes = False
@@ -338,7 +312,7 @@ class Contentline(compat.unicode_type):
         """Long content lines are folded so they are less than 75 characters
         wide.
         """
-        return foldline(self).encode(DEFAULT_ENCODING)
+        return foldline(self.value)
 
 
 class Contentlines(list):
@@ -346,10 +320,11 @@ class Contentlines(list):
     Then this should be efficient. for Huge files, an iterator should probably
     be used instead.
     """
+
     def to_ical(self):
         """Simply join self.
         """
-        return b'\r\n'.join(line.to_ical() for line in self if line) + b'\r\n'
+        return u'\r\n'.join(line.to_ical() for line in self if line) + u'\r\n'
 
     @classmethod
     def from_ical(cls, st):

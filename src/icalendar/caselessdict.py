@@ -28,11 +28,12 @@ class CaselessDict(dict):
     def __init__(self, *args, **kwargs):
         """Set keys to upper for initial dict.
         """
-        dict.__init__(self, *args, **kwargs)
+        super(CaselessDict, self).__init__(*args, **kwargs)
         for key, value in self.items():
             key_upper = to_unicode(key).upper()
+            value = to_unicode(value)
             if key != key_upper:
-                dict.__delitem__(self, key)
+                super(CaselessDict, self).__delitem__(key)
                 self[key_upper] = value
 
     def __getitem__(self, key):
@@ -57,10 +58,12 @@ class CaselessDict(dict):
 
     def setdefault(self, key, value=None):
         key = to_unicode(key)
+        value = to_unicode(value)
         return dict.setdefault(self, key.upper(), value)
 
     def pop(self, key, default=None):
         key = to_unicode(key)
+        default = to_unicode(default)
         return dict.pop(self, key.upper(), default)
 
     def popitem(self):

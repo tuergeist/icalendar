@@ -5,6 +5,29 @@ Changelog
 4.0.dev (unreleased)
 --------------------
 
+API Changes
++++++++++++
+
+icalendar.prop property value classes
+'''''''''''''''''''''''''''''''''''''
+
+- All property value classes derive from the superclass PropertyValue. They
+  don't derive from native Python types anymore (Except vRecur).
+
+- Introduced new `value` property, which holds or returns the native Python
+  value.
+
+- A decoded method return the native Python representation of the value. The
+  difference to the value property is, that lists of PropertyValue objects are
+  also decoded to it's native Python representation.
+
+- Changed from_ical methods from staticmethod to classmethod and let them
+  return an instance of the class instead of a native Python type.
+
+
+3.6 (unreleased)
+----------------
+
 - Support adding lists to a component property, which value already was a list
   and remove the Component.set method, which was only used by the add method.
   [thet]

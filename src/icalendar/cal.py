@@ -12,9 +12,9 @@ from icalendar.parser import Parameters
 from icalendar.parser import q_join
 from icalendar.parser import q_split
 from icalendar.parser_tools import DEFAULT_ENCODING
-from icalendar.parser_tools import data_encode
 from icalendar.prop import TypesFactory
 from icalendar.prop import vText, vDDDLists
+from icalendar.parser_tools import data_encode
 
 import pytz
 
@@ -93,7 +93,25 @@ class Component(CaselessDict):
     # handling of property values
 
     def _encode(self, name, value, parameters=None, encode=1):
-        """Conditional convertion of values.
+        """Encode values to icalendar property values.
+
+        :param name: Name of the property.
+        :type name: string
+
+        :param value: Value of the property. Either of a basic Python type of
+                      any of the icalendar's own property types.
+        :type value: Python native type or icalendar property type.
+
+        :param parameters: Property parameter dictionary for the value. Only
+                           available, if encode is set to True.
+        :type parameters: Dictionary
+
+        :param encode: True, if the value should be encoded to one of
+                       icalendar's own property types (Fallback is "vText")
+                       or False, if not.
+        :type encode: Boolean
+
+        :returns: icalendar property value
         """
         if not encode:
             return value
@@ -115,7 +133,7 @@ class Component(CaselessDict):
     def add(self, name, value, parameters=None, encode=1):
         """Add a property.
 
-        :param name: Key name of the property.
+        :param name: Name of the property.
         :type name: string
 
         :param value: Value of the property. Either of a basic Python type of
@@ -166,35 +184,11 @@ class Component(CaselessDict):
                 value = [oldval, value]
         self[name] = value
 
-    def _decode(self, name, value):
-        """Internal for decoding property values.
-        """
-
-        # TODO: Currently the decoded method calls the icalendar.prop instances
-        # from_ical. We probably want to decode properties into Python native
-        # types here. But when parsing from an ical string with from_ical, we
-        # want to encode the string into a real icalendar.prop property.
-        if isinstance(value, vDDDLists):
-            # TODO: Workaround unfinished decoding
-            return value
-        decoded = types_factory.from_ical(name, value)
-        # TODO: remove when proper decoded is implemented in every prop.* class
-        # Workaround to decode vText properly
-        if isinstance(decoded, vText):
-            decoded = decoded.encode(DEFAULT_ENCODING)
-        return decoded
-
     def decoded(self, name, default=_marker):
-        """Returns decoded value of property.
+        """Returns decoded Python value of the icalendar property.
         """
-        # XXX: fail. what's this function supposed to do in the end?
-        # -rnix
-
         if name in self:
-            value = self[name]
-            if isinstance(value, list):
-                return [self._decode(name, v) for v in value]
-            return self._decode(name, value)
+            return self[name].value
         else:
             if default is _marker:
                 raise KeyError(name)
@@ -210,15 +204,15 @@ class Component(CaselessDict):
         """
         vals = [v.strip('" ') for v in q_split(self[name])]
         if decode:
-            return [self._decode(name, val) for val in vals]
+            return [self.decoded(name, val) for val in vals]
         return vals
 
-    def set_inline(self, name, values, encode=1):
+    def set_inline(self, name, values, encode=True):
         """Converts a list of values into comma seperated string and sets value
         to that.
         """
         if encode:
-            values = [self._encode(name, value, encode=1) for value in values]
+            values = [self._encode(name, value, encode=True) for value in values]
         self[name] = types_factory['inline'](q_join(values))
 
     #########################
@@ -311,9 +305,9 @@ class Component(CaselessDict):
                                   'FREEBUSY', 'RDATE', 'EXDATE')
                 try:
                     if name in datetime_names and 'TZID' in params:
-                        vals = factory(factory.from_ical(vals, params['TZID']))
+                        vals = factory.from_ical(vals, params['TZID'])
                     else:
-                        vals = factory(factory.from_ical(vals))
+                        vals = factory.from_ical(vals)
                 except ValueError:
                     if not component.ignore_exceptions:
                         raise
