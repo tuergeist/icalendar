@@ -45,6 +45,7 @@ from icalendar.parser import Parameters
 from icalendar.parser import escape_char
 from icalendar.parser import tzid_from_dt
 from icalendar.parser import unescape_char
+from icalendar.parser_tools import DEFAULT_ENCODING
 from icalendar.parser_tools import SEQUENCE_TYPES
 from icalendar.parser_tools import to_unicode
 
@@ -143,13 +144,22 @@ class PropertyValue(object):
             return [it.decoded() for it in value]
         return self.value
 
-    def to_ical(self):
+    def _to_ical(self):
         """Produce an RFC5545 compatible ical string of the property value.
 
         :returns: Property value as icalendar/RFC5545 unicode string.
         """
         raise NotImplementedError(u"to_ical must be implemented by "
                                   u"subclasses of Property.")
+
+    def to_ical(self):
+        """Produce an RFC5545 compatible ical string of the property value,
+        encoded to utf-8, as expected by RFC5545.
+
+        :returns: Property value as icalendar/RFC5545 encoded string, by
+                  default encoded to utf-8.
+        """
+        return self._to_ical().encode(DEFAULT_ENCODING)
 
     @staticmethod
     def from_ical(ical):
@@ -173,11 +183,14 @@ class vBinary(PropertyValue):
     """
 
     def __init__(self, value):
-        self.value = to_unicode(value)
+        self.value = value
         self.params = Parameters(encoding='BASE64', value="BINARY")
 
-    def to_ical(self):
+    def _to_ical(self):
         return binascii.b2a_base64(self.value.encode('utf-8'))[:-1]
+
+    def to_ical(self):
+        return self._to_ical()
 
     @classmethod
     def from_ical(cls, ical):
@@ -196,10 +209,10 @@ class vBoolean(PropertyValue):
     def __init__(self, value):
         self.value = bool(value)
 
-    def to_ical(self):
+    def _to_ical(self):
         if self.value:
-            return 'TRUE'
-        return 'FALSE'
+            return u'TRUE'
+        return u'FALSE'
 
     @classmethod
     def from_ical(cls, ical):
@@ -225,7 +238,7 @@ class vCalAddress(PropertyValue):
             value = u'mailto:{0}'.format(value)
         self.value = to_unicode(value)
 
-    def to_ical(self):
+    def _to_ical(self):
         return self.value
 
     @classmethod
@@ -241,7 +254,7 @@ class vFloat(PropertyValue):
     def __init__(self, value):
         self.value = float(value)
 
-    def to_ical(self):
+    def _to_ical(self):
         return to_unicode(self.value, typecast=True)
 
     @classmethod
@@ -260,7 +273,7 @@ class vInt(PropertyValue):
     def __init__(self, value):
         self.value = int(value)
 
-    def to_ical(self):
+    def _to_ical(self):
         return to_unicode(self.value, typecast=True)
 
     @classmethod
@@ -290,8 +303,8 @@ class vDDDLists(PropertyValue):
             self.params = Parameters({'TZID': tzid})
         self.value = vDDD
 
-    def to_ical(self):
-        return b",".join([dt.to_ical() for dt in self.value])
+    def _to_ical(self):
+        return u",".join([dt._to_ical() for dt in self.value])
 
     @classmethod
     def from_ical(cls, ical, timezone=None):
@@ -345,9 +358,9 @@ class vDate(PropertyValue):
         self.value = value
         self.params = Parameters({'value': 'DATE'})
 
-    def to_ical(self):
+    def _to_ical(self):
         value = self.value
-        ret = "%04d%02d%02d" % (value.year, value.month, value.day)
+        ret = u"%04d%02d%02d" % (value.year, value.month, value.day)
         return to_unicode(ret)
 
     @classmethod
@@ -388,11 +401,11 @@ class vDatetime(PropertyValue):
         _set_tzid_param(self.params, value)
         self.value = value
 
-    def to_ical(self):
+    def _to_ical(self):
         value = self.value
         tzid = tzid_from_dt(value)
 
-        ret = "%04d%02d%02dT%02d%02d%02d%s" % (
+        ret = u"%04d%02d%02dT%02d%02d%02d%s" % (
             value.year,
             value.month,
             value.day,
@@ -447,7 +460,7 @@ class vDuration(PropertyValue):
             raise ValueError('Value MUST be a timedelta instance')
         self.value = value
 
-    def to_ical(self):
+    def _to_ical(self):
         value = self.value
         sign = ""
         if value.days < 0:
@@ -502,11 +515,11 @@ class vTime(PropertyValue):
         _set_tzid_param(self.params, value)
         self.value = value
 
-    def to_ical(self):
+    def _to_ical(self):
         value = self.value
         tzid = tzid_from_dt(value)
 
-        ret = "%02d%02d%02d%s" % (
+        ret = u"%02d%02d%02d%s" % (
             value.hour,
             value.minute,
             value.second,
@@ -600,13 +613,13 @@ class vPeriod(PropertyValue):
             return True
         return False
 
-    def to_ical(self):
+    def _to_ical(self):
         if self.by_duration:
-            ret = "%s/%s" % (vDatetime(self.start).to_ical(),
-                             vDuration(self.duration).to_ical())
+            ret = u"%s/%s" % (vDatetime(self.start)._to_ical(),
+                              vDuration(self.duration)._to_ical())
         else:
-            ret = "%s/%s" % (vDatetime(self.start).to_ical(),
-                             vDatetime(self.end).to_ical())
+            ret = u"%s/%s" % (vDatetime(self.start)._to_ical(),
+                              vDatetime(self.end)._to_ical())
         return to_unicode(ret)
 
     @classmethod
@@ -643,7 +656,7 @@ class vWeekday(PropertyValue):
         self.relative = relative and int(relative) or None
         self.value = value
 
-    def to_ical(self):
+    def _to_ical(self):
         return self.value.upper()
 
     @classmethod
@@ -674,7 +687,7 @@ class vFrequency(PropertyValue):
             raise ValueError('Expected frequency, got: %s' % value)
         self.value = value
 
-    def to_ical(self):
+    def _to_ical(self):
         return self.value.upper()  # TODO: upper necessary?
 
     @classmethod
@@ -725,19 +738,22 @@ class vRecur(CaselessDict):
         # Fulfill PropertyValue API
         return self
 
-    def to_ical(self):
+    def _to_ical(self):
         result = []
         for key, vals in self.sorted_items():
             typ = self.types[key]
             if not isinstance(vals, SEQUENCE_TYPES):
                 vals = [vals]
-            vals = ','.join(typ(val).to_ical() for val in vals)
+            vals = u','.join(typ(val)._to_ical() for val in vals)
 
             # CaselessDict keys are always unicode
             key = to_unicode(key)
             result.append(key + u'=' + vals)
 
-        return ';'.join(result)
+        return u';'.join(result)
+
+    def to_ical(self):
+        return self._to_ical().encode(DEFAULT_ENCODING)
 
     @classmethod
     def parse_type(cls, key, values):
@@ -765,7 +781,7 @@ class vText(PropertyValue):
     def __init__(self, value):
         self.value = to_unicode(value)
 
-    def to_ical(self):
+    def _to_ical(self):
         return escape_char(self.value)
 
     @classmethod
@@ -781,7 +797,7 @@ class vUri(PropertyValue):
     def __init__(self, value):
         self.value = to_unicode(value)
 
-    def to_ical(self):
+    def _to_ical(self):
         return self.value
 
     @classmethod
@@ -802,14 +818,14 @@ class vUTCOffset(PropertyValue):
             raise ValueError('Offset value MUST be a timedelta instance')
         self.value = value
 
-    def to_ical(self):
+    def _to_ical(self):
         value = self.value
         if value < timedelta(0):
-            sign = '-%s'
+            sign = u'-%s'
             td = timedelta(0) - value  # get timedelta relative to 0
         else:
             # Google Calendar rejects '0000' but accepts '+0000'
-            sign = '+%s'
+            sign = u'+%s'
             td = value
 
         days, seconds = td.days, td.seconds
@@ -848,8 +864,8 @@ class vGeo(PropertyValue):
     """
 
     def __init__(self, value):
-        if not isinstance(value, tuple):
-            raise ValueError('Value MUST be a tuple instance')
+        if not isinstance(value, (tuple, list)):
+            raise ValueError('Value MUST be a tuple or list instance')
 
         try:
             latitude, longitude = value
@@ -860,9 +876,9 @@ class vGeo(PropertyValue):
                              'latitude and longitude')
         self.value = (latitude, longitude)
 
-    def to_ical(self):
+    def _to_ical(self):
         value = self.value
-        return '%s;%s' % (value[0], value[1])
+        return u'%s;%s' % (value[0], value[1])
 
     @classmethod
     def from_ical(cls, ical):
@@ -882,7 +898,7 @@ class vInline(PropertyValue):
     def __init__(self, value):
         self.value = to_unicode(value)
 
-    def to_ical(self):
+    def _to_ical(self):
         return self.value
 
     @classmethod
@@ -1039,6 +1055,7 @@ class TypesFactory(CaselessDict):
         """Encodes a named value from a primitive python type to an icalendar
         encoded string.
         """
+        import pdb; pdb.set_trace()
         type_class = self.for_property(name)
         return type_class(value).to_ical()
 

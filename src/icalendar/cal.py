@@ -92,6 +92,11 @@ class Component(CaselessDict):
     #############################
     # handling of property values
 
+    @property
+    def value(self):
+        # Fulfill PropertyValue API
+        return self
+
     def _encode(self, name, value, parameters=None, encode=1):
         """Encode values to icalendar property values.
 
@@ -248,8 +253,7 @@ class Component(CaselessDict):
         """Returns properties in this component and subcomponents as:
         [(name, value), ...]
         """
-        vText = types_factory['text']
-        properties = [('BEGIN', vText(self.name).to_ical())]
+        properties = [(u'BEGIN', vText(self.name)._to_ical())]
         property_names = self.sorted_keys()
         for name in property_names:
             values = self[name]
@@ -263,8 +267,28 @@ class Component(CaselessDict):
             # recursion is fun!
             for subcomponent in self.subcomponents:
                 properties += subcomponent.property_items()
-        properties.append(('END', vText(self.name).to_ical()))
+        properties.append((u'END', vText(self.name)._to_ical()))
         return properties
+
+    def content_line(self, name, value):
+        """Returns property as content line.
+        """
+        params = getattr(value, 'params', Parameters())
+        return Contentline.from_parts(name, params, value)
+
+    def content_lines(self):
+        """Converts the Component and subcomponents into content lines.
+        """
+        contentlines = Contentlines()
+        for name, value in self.property_items():
+            cl = self.content_line(name, value)
+            contentlines.append(cl)
+        contentlines.append('')  # remember the empty string in the end
+        return contentlines
+
+    def to_ical(self):
+        content_lines = self.content_lines()
+        return content_lines.to_ical()
 
     @classmethod
     def from_ical(cls, st, multiple=False):
@@ -326,30 +350,6 @@ class Component(CaselessDict):
                              'exactly one is required: '
                              '{st!r}'.format(**locals()))
         return comps[0]
-
-    def __repr__(self):
-        return '%s(%s)' % (self.name, data_encode(self))
-
-    def content_line(self, name, value):
-        """Returns property as content line.
-        """
-        params = getattr(value, 'params', Parameters())
-        return Contentline.from_parts(name, params, value)
-
-    def content_lines(self):
-        """Converts the Component and subcomponents into content lines.
-        """
-        contentlines = Contentlines()
-        for name, value in self.property_items():
-            cl = self.content_line(name, value)
-            contentlines.append(cl)
-        contentlines.append('')  # remember the empty string in the end
-        return contentlines
-
-    def to_ical(self):
-        content_lines = self.content_lines()
-        return content_lines.to_ical()
-
 
 #######################################
 # components defined in RFC 2445

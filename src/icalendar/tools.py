@@ -27,7 +27,7 @@ class UIDGenerator(object):
         """
         host_name = to_unicode(host_name)
         unique = unique or self.rnd_string()
-        today = to_unicode(vDatetime(datetime.today()).to_ical())
+        today = vDatetime(datetime.today())._to_ical()
         return vText('%s-%s@%s' % (today,
                                    unique,
                                    host_name))

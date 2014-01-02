@@ -36,6 +36,11 @@ class CaselessDict(dict):
                 super(CaselessDict, self).__delitem__(key)
                 self[key_upper] = value
 
+    @property
+    def value(self):
+        # Fulfill PropertyValue API
+        return self
+
     def __getitem__(self, key):
         key = to_unicode(key)
         return dict.__getitem__(self, key.upper())

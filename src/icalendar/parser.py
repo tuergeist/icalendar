@@ -166,10 +166,7 @@ class Parameters(CaselessDict):
         """
         return self.keys()
 
-    def __repr__(self):
-        return 'Parameters(%s)' % data_encode(self)
-
-    def to_ical(self):
+    def _to_ical(self):
         result = []
         items = self.items()
         for key, value in sorted(items):
@@ -183,6 +180,9 @@ class Parameters(CaselessDict):
             result.append(key + u'=' + value)
 
         return u';'.join(result)
+
+    def to_ical(self):
+        return self._to_ical().encode(DEFAULT_ENCODING)
 
     @classmethod
     def from_ical(cls, st, strict=False):
@@ -247,6 +247,9 @@ class Contentline(object):
         self.value = value
         self.strict = strict
 
+    def __repr__(self):
+        return "%s('%s')" % (self.__class__.__name__, self.to_ical())
+
     @classmethod
     def from_parts(cls, name, params, values):
         """Turn a parts into a content line.
@@ -254,13 +257,13 @@ class Contentline(object):
         assert isinstance(params, Parameters)
         name = to_unicode(name)
         values = to_unicode(values)
-        if hasattr(values, 'to_ical'):
-            values = values.to_ical()
+        if hasattr(values, '_to_ical'):
+            values = values._to_ical()
         else:
-            values = vText(values).to_ical()
+            values = vText(values)._to_ical()
 
         if params:
-            params = params.to_ical()
+            params = params._to_ical()
             return cls(u'%s;%s:%s' % (name, params, values))
         return cls(u'%s:%s' % (name, values))
 
@@ -308,11 +311,14 @@ class Contentline(object):
         # a fold is carriage return followed by either a space or a tab
         return cls(uFOLD.sub('', ical), strict=strict)
 
-    def to_ical(self):
+    def _to_ical(self):
         """Long content lines are folded so they are less than 75 characters
         wide.
         """
         return foldline(self.value)
+
+    def to_ical(self):
+        return self._to_ical().encode(DEFAULT_ENCODING)
 
 
 class Contentlines(list):
@@ -321,10 +327,21 @@ class Contentlines(list):
     be used instead.
     """
 
-    def to_ical(self):
+    @property
+    def value(self):
+        # Fulfill PropertyValue API
+        return self
+
+    def __repr__(self):
+        return "%s('%s')" % (self.__class__.__name__, self.to_ical())
+
+    def _to_ical(self):
         """Simply join self.
         """
-        return u'\r\n'.join(line.to_ical() for line in self if line) + u'\r\n'
+        return u'\r\n'.join(line._to_ical() for line in self if line) + u'\r\n'
+
+    def to_ical(self):
+        return self._to_ical().encode(DEFAULT_ENCODING)
 
     @classmethod
     def from_ical(cls, st):
