@@ -1055,7 +1055,6 @@ class TypesFactory(CaselessDict):
         """Encodes a named value from a primitive python type to an icalendar
         encoded string.
         """
-        import pdb; pdb.set_trace()
         type_class = self.for_property(name)
         return type_class(value).to_ical()
 
