@@ -30,17 +30,17 @@ class TestRecurrence(unittest.TestCase):
         )
 
         self.assertEqual(
-            first_event['exdate'].dts[0].dt,
+            first_event['exdate'].value[0].value,
             datetime.datetime(1996, 4, 2, 1, 0, tzinfo=pytz.utc)
         )
 
         self.assertEqual(
-            first_event['exdate'].dts[1].dt,
+            first_event['exdate'].value[1].value,
             datetime.datetime(1996, 4, 3, 1, 0, tzinfo=pytz.utc)
         )
 
         self.assertEqual(
-            first_event['exdate'].dts[2].dt,
+            first_event['exdate'].value[2].value,
             datetime.datetime(1996, 4, 4, 1, 0, tzinfo=pytz.utc)
         )
 

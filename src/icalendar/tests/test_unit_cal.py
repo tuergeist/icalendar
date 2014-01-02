@@ -52,7 +52,7 @@ class TestCalComponent(unittest.TestCase):
               ['test3@test.com', 'test4@test.com'])
 
         self.assertEqual(
-            c,
+            c.to_ical(),
             Event({'ATTENDEE': [
                 prop.vCalAddress('test@test.com'),
                 prop.vCalAddress('test2@test.com'),
@@ -60,14 +60,17 @@ class TestCalComponent(unittest.TestCase):
                 prop.vCalAddress('test@example.dk'),
                 prop.vCalAddress('test3@test.com'),
                 prop.vCalAddress('test4@test.com')
-            ]})
+            ]}).to_ical()
         )
 
         ###
 
         # You can get the values back directly ...
         c.add('prodid', '-//my product//')
-        self.assertEqual(c['prodid'], prop.vText(u'-//my product//'))
+        self.assertEqual(
+            c['prodid'].to_ical(),
+            prop.vText(u'-//my product//').to_ical()
+        )
 
         # ... or decoded to a python type
         self.assertEqual(c.decoded('prodid'), b'-//my product//')
@@ -76,7 +79,7 @@ class TestCalComponent(unittest.TestCase):
         self.assertEqual(c.decoded('version', 'No Version'), 'No Version')
 
         c.add('rdate', [datetime(2013, 3, 28), datetime(2013, 3, 27)])
-        self.assertTrue(isinstance(c.decoded('rdate'), prop.vDDDLists))
+        self.assertTrue(isinstance(c.decoded('rdate'), list))
 
         # The component can render itself in the RFC 2445 format.
         c = Component()
@@ -121,29 +124,30 @@ class TestCalComponent(unittest.TestCase):
 
         # We can enumerate property items recursively with the property_items
         # method.
+        # Text are unicode objects.
         self.assertEqual(
             c.property_items(),
-            [('BEGIN', b'VCALENDAR'), ('ATTENDEE', prop.vCalAddress('Max M')),
-             ('BEGIN', b'VEVENT'), ('DTEND', '20000102T000000'),
-             ('DTSTART', '20000101T000000'),
-             ('SUMMARY', 'A brief history of time'), ('END', b'VEVENT'),
-             ('END', b'VCALENDAR')]
+            [(u'BEGIN', u'VCALENDAR'), (u'ATTENDEE', prop.vCalAddress('Max M')),
+             (u'BEGIN', u'VEVENT'), (u'DTEND', u'20000102T000000'),
+             (u'DTSTART', u'20000101T000000'),
+             (u'SUMMARY', u'A brief history of time'), (u'END', u'VEVENT'),
+             (u'END', u'VCALENDAR')]
         )
 
         # We can also enumerate property items just under the component.
         self.assertEqual(
             c.property_items(recursive=False),
-            [('BEGIN', b'VCALENDAR'),
-             ('ATTENDEE', prop.vCalAddress('Max M')),
-             ('END', b'VCALENDAR')]
+            [(u'BEGIN', u'VCALENDAR'),
+             (u'ATTENDEE', prop.vCalAddress('Max M')),
+             (u'END', u'VCALENDAR')]
         )
 
         sc = c.subcomponents[0]
         self.assertEqual(
             sc.property_items(recursive=False),
-            [('BEGIN', b'VEVENT'), ('DTEND', '20000102T000000'),
-             ('DTSTART', '20000101T000000'),
-             ('SUMMARY', 'A brief history of time'), ('END', b'VEVENT')]
+            [(u'BEGIN', u'VEVENT'), (u'DTEND', u'20000102T000000'),
+             (u'DTSTART', u'20000101T000000'),
+             (u'SUMMARY', u'A brief history of time'), (u'END', u'VEVENT')]
         )
 
         # Text fields which span multiple mulitple lines require proper
@@ -266,14 +270,14 @@ class TestCalComponent(unittest.TestCase):
             component_str += property_name + ';TZID=America/Denver:'
             component_str += '20120404T073000\nEND:' + component_name
             component = Component.from_ical(component_str)
-            self.assertEqual(str(component[property_name].dt.tzinfo.zone),
+            self.assertEqual(str(component[property_name].value.tzinfo.zone),
                              "America/Denver")
 
             component_str = 'BEGIN:' + component_name + '\n'
             component_str += property_name + ':'
             component_str += '20120404T073000\nEND:' + component_name
             component = Component.from_ical(component_str)
-            self.assertEqual(component[property_name].dt.tzinfo,
+            self.assertEqual(component[property_name].value.tzinfo,
                              None)
 
 

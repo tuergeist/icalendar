@@ -65,10 +65,12 @@ class TestPropertyParams(unittest.TestCase):
         attendee = vCalAddress('test@mail.com')
         attendee.params['CN'] = cn_param
         vevent.add('ATTENDEE', attendee)
+        # The attendee gets a mailto URI, if it's an email and not mailto was
+        # defined.
         self.assertEqual(
             vevent.to_ical(),
             b'BEGIN:VEVENT\r\nATTENDEE;CN=' + cn_quoted.encode('utf-8') +
-            b':test@mail.com\r\nEND:VEVENT\r\n'
+            b':mailto:test@mail.com\r\nEND:VEVENT\r\n'
         )
 
     def test_escaping(self):

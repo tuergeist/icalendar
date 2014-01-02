@@ -135,7 +135,7 @@ class TestTimezoned(unittest.TestCase):
         self.assertTrue(date2.tzinfo.__module__ == 'dateutil.tz')
 
         # make sure, it's parsed properly and doesn't throw an error
-        self.assertTrue(icalendar.vDDDTypes(date).to_ical()
+        self.assertTrue(icalendar.vDDDTypesFactory(date).to_ical()
                         == b'20120830T224100Z')
-        self.assertTrue(icalendar.vDDDTypes(date2).to_ical()
+        self.assertTrue(icalendar.vDDDTypesFactory(date2).to_ical()
                         == b'20120830T224100')

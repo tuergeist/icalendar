@@ -43,7 +43,7 @@ TZOFFSETTO:-0800
 END:STANDARD
 END:VTIMEZONE"""
 
-        tz = icalendar.Timezone.from_ical(ical_str)
+        tz = icalendar.Timezone.from_ical(ical_str).value
         self.assertEqual(
             tz.to_ical(),
             b'BEGIN:VTIMEZONE\r\nTZID:America/Los Angeles\r\n'
@@ -114,7 +114,7 @@ DTSTAMP:20070221T095412Z
 SEQUENCE:0
 END:VEVENT"""
 
-        cal = icalendar.Calendar.from_ical(ical_str)
+        cal = icalendar.Calendar.from_ical(ical_str).value
         recur = cal.decoded("RRULE")
         self.assertIsInstance(recur, icalendar.vRecur)
         self.assertEqual(
@@ -146,7 +146,7 @@ END:VEVENT"""
         """
 
         ical_content = "BEGIN:VEVENT\r\nSUMMARY;LANGUAGE=ru:te\r\nEND:VEVENT"
-        icalendar.Event.from_ical(ical_content).to_ical()
+        icalendar.Event.from_ical(ical_content).value.to_ical()
 
     def test_issue_101(self):
         """Issue #101 - icalender is choking on umlauts in ORGANIZER

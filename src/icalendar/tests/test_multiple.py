@@ -23,6 +23,6 @@ class TestMultiple(unittest.TestCase):
                                  ['VCALENDAR', 'VEVENT', 'VEVENT'])
 
         self.assertEqual(
-            cals[0]['prodid'],
-            vText('-//Mozilla.org/NONSGML Mozilla Calendar V1.0//EN')
+            cals[0]['prodid'].to_ical(),
+            vText('-//Mozilla.org/NONSGML Mozilla Calendar V1.0//EN').to_ical()
         )

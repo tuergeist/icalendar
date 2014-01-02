@@ -19,13 +19,15 @@ class IcalendarTestCase (unittest.TestCase):
         # Notice that there is an extra empty string in the end of the content
         # lines. That is so they can be easily joined with:
         # '\r\n'.join(contentlines))
-        self.assertEqual(Contentlines.from_ical('A short line\r\n'),
+        self.assertEqual(Contentlines.from_ical('A short line\r\n').value,
                          ['A short line', ''])
-        self.assertEqual(Contentlines.from_ical('A faked\r\n  long line\r\n'),
-                         ['A faked long line', ''])
+        self.assertEqual(
+            Contentlines.from_ical('A faked\r\n  long line\r\n').value,
+            ['A faked long line', '']
+        )
         self.assertEqual(
             Contentlines.from_ical('A faked\r\n  long line\r\nAnd another '
-                                   'lin\r\n\te that is folded\r\n'),
+                                   'lin\r\n\te that is folded\r\n').value,
             ['A faked long line', 'And another line that is folded', '']
         )
 
@@ -48,7 +50,7 @@ class IcalendarTestCase (unittest.TestCase):
 
         # A folded line gets unfolded
         self.assertEqual(
-            Contentline.from_ical(c),
+            Contentline.from_ical(c).value,
             ('123456789 123456789 123456789 123456789 123456789 123456789 '
              '123456789 123456789 123456789 123456789 ')
         )
@@ -116,7 +118,7 @@ class IcalendarTestCase (unittest.TestCase):
                              'CN': 'Max Rasmussen'}),
                  'MAILTO:maxm@example.com')
         self.assertEqual(
-            Contentline.from_parts(*parts),
+            Contentline.from_parts(*parts).value,
             'ATTENDEE;CN="Max Rasmussen";ROLE=REQ-PARTICIPANT:'
             'MAILTO:maxm@example.com'
         )
@@ -124,28 +126,28 @@ class IcalendarTestCase (unittest.TestCase):
         # and again
         parts = ('ATTENDEE', Parameters(), 'MAILTO:maxm@example.com')
         self.assertEqual(
-            Contentline.from_parts(*parts),
+            Contentline.from_parts(*parts).value,
             'ATTENDEE:MAILTO:maxm@example.com'
         )
 
         # A value can also be any of the types defined in PropertyValues
         parts = ('ATTENDEE', Parameters(), vText('MAILTO:test@example.com'))
         self.assertEqual(
-            Contentline.from_parts(*parts),
+            Contentline.from_parts(*parts).value,
             'ATTENDEE:MAILTO:test@example.com'
         )
 
         # A value in UTF-8
         parts = ('SUMMARY', Parameters(), vText('INternational char æ ø å'))
         self.assertEqual(
-            Contentline.from_parts(*parts),
+            Contentline.from_parts(*parts).value,
             u'SUMMARY:INternational char æ ø å'
         )
 
         # A value can also be unicode
         parts = ('SUMMARY', Parameters(), vText(u'INternational char æ ø å'))
         self.assertEqual(
-            Contentline.from_parts(*parts),
+            Contentline.from_parts(*parts).value,
             u'SUMMARY:INternational char æ ø å'
         )
 
@@ -187,7 +189,7 @@ class IcalendarTestCase (unittest.TestCase):
             ValueError,
             'Content line could not be parsed into parts'
         ):
-            Contentline.from_ical("k;:no param").parts()
+            Contentline.from_ical("k;:no param").parts().value
 
         self.assertEqual(
             Contentline('key;param=pvalue:value', strict=False).parts(),
@@ -210,6 +212,7 @@ class IcalendarTestCase (unittest.TestCase):
     def test_fold_line(self):
         from ..parser import foldline
 
+        # calling foldline with non-unicode object raises AssertionError
         self.assertEqual(foldline(u'foo'), u'foo')
         self.assertEqual(
             foldline(u"Lorem ipsum dolor sit amet, consectetur adipiscing "

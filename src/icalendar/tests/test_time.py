@@ -19,7 +19,7 @@ class TestTime(unittest.TestCase):
         cal = icalendar.Calendar.from_ical(ics.read())
         ics.close()
 
-        self.assertEqual(cal['X-SOMETIME'].dt, datetime.time(17, 20, 10))
+        self.assertEqual(cal['X-SOMETIME'].value, datetime.time(17, 20, 10))
         self.assertEqual(cal['X-SOMETIME'].to_ical(), '172010')
 
     def test_create_to_ical(self):
