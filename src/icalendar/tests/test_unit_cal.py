@@ -81,74 +81,6 @@ class TestCalComponent(unittest.TestCase):
         c.add('rdate', [datetime(2013, 3, 28), datetime(2013, 3, 27)])
         self.assertTrue(isinstance(c.decoded('rdate'), list))
 
-        # The component can render itself in the RFC 2445 format.
-        c = Component()
-        c.name = 'VCALENDAR'
-        c.add('attendee', 'Max M')
-        self.assertEqual(
-            c.to_ical(),
-            b'BEGIN:VCALENDAR\r\nATTENDEE:Max M\r\nEND:VCALENDAR\r\n'
-        )
-
-        # Components can be nested, so You can add a subcompont. Eg a calendar
-        # holds events.
-        e = Component(summary='A brief history of time')
-        e.name = 'VEVENT'
-        e.add('dtend', '20000102T000000', encode=0)
-        e.add('dtstart', '20000101T000000', encode=0)
-        self.assertEqual(
-            e.to_ical(),
-            b'BEGIN:VEVENT\r\nDTEND:20000102T000000\r\n'
-            + b'DTSTART:20000101T000000\r\nSUMMARY:A brief history of time\r'
-            + b'\nEND:VEVENT\r\n'
-        )
-
-        c.add_component(e)
-        self.assertEqual(
-            c.subcomponents,
-            [Event({'DTEND': '20000102T000000', 'DTSTART': '20000101T000000',
-                    'SUMMARY': 'A brief history of time'})]
-        )
-
-        # We can walk over nested componentes with the walk method.
-        self.assertEqual([i.name for i in c.walk()], ['VCALENDAR', 'VEVENT'])
-
-        # We can also just walk over specific component types, by filtering
-        # them on their name.
-        self.assertEqual([i.name for i in c.walk('VEVENT')], ['VEVENT'])
-
-        self.assertEqual(
-            [i['dtstart'] for i in c.walk('VEVENT')],
-            ['20000101T000000']
-        )
-
-        # We can enumerate property items recursively with the property_items
-        # method.
-        # Text are unicode objects.
-        self.assertEqual(
-            c.property_items(),
-            [(u'BEGIN', u'VCALENDAR'), (u'ATTENDEE', prop.vCalAddress('Max M')),
-             (u'BEGIN', u'VEVENT'), (u'DTEND', u'20000102T000000'),
-             (u'DTSTART', u'20000101T000000'),
-             (u'SUMMARY', u'A brief history of time'), (u'END', u'VEVENT'),
-             (u'END', u'VCALENDAR')]
-        )
-
-        # We can also enumerate property items just under the component.
-        self.assertEqual(
-            c.property_items(recursive=False),
-            [(u'BEGIN', u'VCALENDAR'),
-             (u'ATTENDEE', prop.vCalAddress('Max M')),
-             (u'END', u'VCALENDAR')]
-        )
-
-        sc = c.subcomponents[0]
-        self.assertEqual(
-            sc.property_items(recursive=False),
-            [(u'BEGIN', u'VEVENT'), (u'DTEND', u'20000102T000000'),
-             (u'DTSTART', u'20000101T000000'),
-             (u'SUMMARY', u'A brief history of time'), (u'END', u'VEVENT')]
-        )
 
         # Text fields which span multiple mulitple lines require proper
         # indenting
@@ -210,6 +142,84 @@ class TestCalComponent(unittest.TestCase):
         freebusy = c.get_inline('freebusy', decode=1)
         self.assertTrue(isinstance(freebusy[0][0], datetime))
         self.assertTrue(isinstance(freebusy[0][1], timedelta))
+
+    def test_cal_Component_property_items(self):
+        from icalendar.cal import Component
+        # The component can render itself in the RFC 2445 format.
+        c = Component()
+        c.name = 'VCALENDAR'
+        c.add('attendee', 'Max M')
+        self.assertEqual(
+            c.to_ical(),
+            b'BEGIN:VCALENDAR\r\nATTENDEE:Max M\r\nEND:VCALENDAR\r\n'
+        )
+
+        # Components can be nested, so You can add a subcomponent.
+        # For example calendar that holds events.
+        e = Component()
+        e.name = 'VEVENT'
+        e.add('summary', 'A brief history of time')
+        e.add('dtend', '20000102T000000', encode=False)
+        e.add('dtstart', '20000101T000000', encode=False)
+        self.assertEqual(
+            e.to_ical(),
+            b'BEGIN:VEVENT\r\nDTEND:20000102T000000\r\n'
+            + b'DTSTART:20000101T000000\r\nSUMMARY:A brief history of time\r'
+            + b'\nEND:VEVENT\r\n'
+        )
+
+        c.add_component(e)
+        self.assertEqual(
+            c.subcomponents,
+            [icalendar.Event({
+                'DTEND': '20000102T000000',
+                'DTSTART': '20000101T000000',
+                'SUMMARY': 'A brief history of time'})]
+        )
+
+        # We can walk over nested componentes with the walk method.
+        self.assertEqual([i.name for i in c.walk()], ['VCALENDAR', 'VEVENT'])
+
+        # We can also just walk over specific component types, by filtering
+        # them on their name.
+        self.assertEqual([i.name for i in c.walk('VEVENT')], ['VEVENT'])
+
+        self.assertEqual(
+            [i['dtstart'] for i in c.walk('VEVENT')],
+            ['20000101T000000']
+        )
+
+        # We can enumerate property items recursively with the property_items
+        # method.
+        self.assertEqual(
+            c.property_items(),
+            [(u'BEGIN', u'VCALENDAR'),
+             (u'ATTENDEE', icalendar.prop.vCalAddress('Max M')),
+             (u'BEGIN', u'VEVENT'),
+             (u'DTEND', u'20000102T000000'),
+             (u'DTSTART', u'20000101T000000'),
+             (u'SUMMARY', u'A brief history of time'),
+             (u'END', u'VEVENT'),
+             (u'END', u'VCALENDAR')]
+        )
+
+        # We can also enumerate property items just under the component.
+        self.assertEqual(
+            c.property_items(recursive=False),
+            [(u'BEGIN', u'VCALENDAR'),
+             (u'ATTENDEE', icalendar.prop.vCalAddress('Max M')),
+             (u'END', u'VCALENDAR')]
+        )
+
+        sc = c.subcomponents[0]
+        self.assertEqual(
+            sc.property_items(recursive=False),
+            [(u'BEGIN', u'VEVENT'),
+             (u'DTEND', u'20000102T000000'),
+             (u'DTSTART', u'20000101T000000'),
+             (u'SUMMARY', u'A brief history of time'),
+             (u'END', u'VEVENT')]
+        )
 
     def test_cal_Component_add(self):
         # Test the for timezone correctness: dtstart should preserve it's

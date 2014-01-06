@@ -11,10 +11,9 @@ from icalendar.parser import Contentlines
 from icalendar.parser import Parameters
 from icalendar.parser import q_join
 from icalendar.parser import q_split
-from icalendar.parser_tools import DEFAULT_ENCODING
+from icalendar.prop import vText
 from icalendar.prop import TypesFactory
-from icalendar.prop import vText, vDDDLists
-from icalendar.parser_tools import data_encode
+from icalendar.parser_tools import to_unicode
 
 import pytz
 
@@ -119,7 +118,7 @@ class Component(CaselessDict):
         :returns: icalendar property value
         """
         if not encode:
-            return value
+            return to_unicode(value)
         if isinstance(value, types_factory.all_types):
             # Don't encode already encoded values.
             return value
@@ -193,7 +192,12 @@ class Component(CaselessDict):
         """Returns decoded Python value of the icalendar property.
         """
         if name in self:
-            return self[name].value
+            if hasattr(self[name], 'value'):
+                return self[name].value
+            else:
+                # TODO: revisit: support of unencoded components at all?
+                # unencoded component
+                return self[name]
         else:
             if default is _marker:
                 raise KeyError(name)
@@ -201,7 +205,7 @@ class Component(CaselessDict):
                 return default
 
     ########################################################################
-    # Inline values. A few properties have multiple values inlined in in one
+    # Inline values. A few properties have multiple values inlined in one
     # property line. These methods are used for splitting and joining these.
 
     def get_inline(self, name, decode=1):
@@ -217,7 +221,8 @@ class Component(CaselessDict):
         to that.
         """
         if encode:
-            values = [self._encode(name, value, encode=True) for value in values]
+            values = [self._encode(name, value, encode=True)
+                      for value in values]
         self[name] = types_factory['inline'](q_join(values))
 
     #########################
@@ -350,6 +355,7 @@ class Component(CaselessDict):
                              'exactly one is required: '
                              '{st!r}'.format(**locals()))
         return comps[0]
+
 
 #######################################
 # components defined in RFC 2445
