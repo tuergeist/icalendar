@@ -17,9 +17,7 @@ class TestEncoding(unittest.TestCase):
             data = open(os.path.join(directory, 'x_location.ics'), 'rb').read()
             cal = icalendar.Calendar.from_ical(data)
             for event in cal.walk('vevent'):
-                self.assertEqual(len(event.errors), 1, 'Got too many errors')
-                error = event.errors[0][1]
-                self.assertTrue(error.startswith(u'Content line could not be parsed into parts'))
+                self.assertEqual(len(event.errors), 0, 'Got too many errors')
 
         except UnicodeEncodeError as e:
             self.fail("There is something wrong with encoding in the collected error messages")
