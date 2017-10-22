@@ -89,6 +89,14 @@ else:
 DSTDIFF = DSTOFFSET - STDOFFSET
 
 
+def handle_invalid_timezone(timezone):
+    """This is used to deal with timezone identifiers who have no matching VTIMEZONE
+
+    Overwrite as needed.
+    """
+    return None
+
+
 class FixedOffset(tzinfo):
     """Fixed offset in minutes east from UTC.
     """
@@ -402,8 +410,10 @@ class vDatetime(object):
             except pytz.UnknownTimeZoneError:
                 if timezone in WINDOWS_TO_OLSON:
                     tzinfo = pytz.timezone(WINDOWS_TO_OLSON.get(timezone))
+                elif timezone in _timezone_cache:
+                    tzinfo = _timezone_cache.get(timezone)
                 else:
-                    tzinfo = _timezone_cache.get(timezone, None)
+                    tzinfo = handle_invalid_timezone(timezone)
 
         try:
             timetuple = (
