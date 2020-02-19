@@ -16,6 +16,9 @@ Bug fixes:
 
 - *add item here*
 
+Minor changes:
+
+- removed deprecated test checks [tuergeist]
 
 4.0.4 (2019-11-25)
 ------------------
